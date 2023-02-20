@@ -1,0 +1,76 @@
+<?php
+
+	/**
+	* User Model
+	*/
+	class Subscriber extends Model{
+
+
+		protected static $primaryKey = "subscriberid";
+		protected static $tableName = 'Subscriber';
+		
+		function __construct(){
+			# code...
+			parent::__construct();
+			
+		}
+
+		public function getId(){
+			# code...
+			return $this->getColumnValue('subscriberid');
+		}
+
+		public function setPhone($value){
+			# code...
+			$this->setColumnValue('msisdn', $value);
+		}
+
+
+		public function getPhone(){
+			# code...
+			return $this->getColumnValue('msisdn');
+		}
+
+		public function setLocation($value){
+			# code...
+			$this->setColumnValue('location', $value);
+
+		}
+
+		public function getLocation(){
+			# code...
+			return $this->getColumnValue('location');
+		}
+
+		public function setCategory($value){
+			# code...
+			$this->setColumnValue('category', $value);
+
+		}
+
+		public function getCategory(){
+			# code...
+			return $this->getColumnValue('category');
+		}
+
+		public function setLastDialed($value){
+
+			$this->setColumnValue('last_dialed_in', $value);
+
+		}
+
+		public function getLastDialed(){
+
+			return $this->getColumnValue('last_dialed_in');
+		}
+
+		public function getAllNotDialedIn(){
+			# code...
+			return self::get('SELECT msisdn FROM WHERE last_dialed_in < :today',array(today=>'NOW()'));
+		
+		}		
+
+		 
+	}
+
+?>

@@ -1,0 +1,35 @@
+<?php
+
+/**
+* Class DashboardController 
+* Extends Controller
+*/
+
+class DashboardController extends Controller
+{
+	function __construct(){
+		parent::__construct();
+	}
+
+	function index(){
+
+		$api = new ApiController();
+
+		$this->setVariable('today', date('Y-m-d'));
+
+		$this->setVariable('total', $api->call_count('incoming',NULL));
+		$this->setVariable('answered', $api->call_count('incoming','ANSWERED'));
+		$this->setVariable('not_answered', $api->call_count('incoming','NO ANSWER'));
+		$this->setVariable('failed', $api->call_count('incoming','FAILED'));
+		$this->setVariable('busy', $api->call_count('incoming','BUSY'));
+
+		$this->setVariable('total_call', CDR::getSum('billsec'));
+
+
+		$this->setView('', 'index');
+
+	}
+	
+}
+
+?>

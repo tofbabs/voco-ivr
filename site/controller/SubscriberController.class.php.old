@@ -1,0 +1,177 @@
+<?php
+
+/**
+* Class ReportController 
+* Extends Controller
+*/
+
+class SubscriberController extends Controller{
+
+	private $host;
+	function __construct(){
+		parent::__construct();
+		global $host;
+		$this->host = $host;
+
+		$this->setVariable('total', Subscriber::getCount());
+		$this->setVariable('generic', Subscriber::getCount(array('category' => 'generic')));
+		$this->setVariable('christian', Subscriber::getCount(array('category' => 'christian')));
+		$this->setVariable('muslim', Subscriber::getCount(array('category' => 'muslim')));
+	}
+
+	function index(){
+
+		if(isset($_POST['uploadSubBtn'])) {
+
+			$state = isset($_POST['state']) ? $_POST['state'] : Utils::trace('No State set..');
+			$category = isset($_POST['cat']) ? $_POST['cat'] : Utils::trace('Default Category set..');
+
+			// Location to Move Freshly uploaded file
+		    $uploadfile = str_replace(' ', '_', $state) . "_" . $category . "_" . time() . ".csv";
+		    // echo $uploadfile;
+		    Utils::trace('Uploading ' . $uploadfile . "...");
+
+		    // print_r($_FILES);
+
+		    if (move_uploaded_file($_FILES['file']['tmp_name'], UPLOAD_PATH . $uploadfile)) {
+		        $msg = 'File Uploaded Successfully';
+		        // $this->notifyBar('success',$msg);
+		    } 
+		    else {
+		        $msg = 'Upload Failed';
+		       // $this->notifyBar('error',$msg);
+		    }
+
+		    echo $msg;
+		    Utils::trace($msg);
+
+		    $queryData = http_build_query(
+		    	array(
+		    			'cat' => $category,
+		    			'state' => $state,
+		    			'file' => $uploadfile
+		    		)
+
+		    	);
+		    echo $queryData;
+		    $url = $this->host . '/subscriber/bulkAdd?' . $queryData;
+		    echo $url;
+		    // $null = exec('wget ' . $url);
+
+		}
+
+		$this->setView('', 'subscriber');
+
+	}
+
+	function bulkAdd($file, $state, $cat= 'generic'){
+
+		$s = new Subscriber();
+
+		$s->setCategory($cat);
+		$s->setLocation($state);
+
+		Utils::trace("Updating Subscriber List in " . $file . ' as ' . $state . $cat);
+
+		if (($handle = fopen($file, "r")) !== FALSE) {
+			// exclusive lock
+			if (flock($handle,LOCK_EX|LOCK_NB)){
+
+			 	while (($data = fgetcsv($handle, 20, "\n")) !== FALSE) {
+
+			 	    $msisdn = $data[0];
+
+			 		if ($msisdn == "") {
+			 		    # code...
+			 		    continue;
+			 		}
+
+			 		Utils::trace('Adding ' . $msisdn . "\n");
+
+			 	    $s->setPhone($msisdn);
+			 	    $s->save();
+			 	}
+
+			  	// release lock
+			  	flock($handle,LOCK_UN);
+			  	fclose($handle);
+			  	unlink($file);
+			}
+			else{
+
+				Utils::trace("Error locking file!");
+
+			}
+		     
+		}
+
+	}
+
+	function updatesub($state){
+
+
+		$arrState = array("Anambra","Enugu","Akwa Ibom","Adamawa","Abia","Bauchi","Bayelsa","Benue","Borno","Cross River","Delta"
+		,"Ebonyi","Edo","Ekiti","Gombe","Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos"
+		,"Nasarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba","Yobe","Zamfara");
+
+
+		// foreach ($arrState as $key => $state) {
+
+
+			for ($i=0; $i < 20; $i++) { 
+				# code...
+				$state = str_replace(' ', '', strtolower($state));
+
+				// Set $i to original name of file
+				$i = ($i == 0) ? null : $i;
+				$file = UPLOAD_PATH . $state . $i . ".csv";
+
+				echo $file;
+
+				Utils::trace('Checking if ' . $file . 'Exist....');
+
+				if (file_exists($file)) {
+					
+					Utils::trace($file . ' Exist. Handing to Bulk Insert Module');
+					// Invoke Bulk add Module 
+					$this->bulkAdd($file, $state);
+
+				}
+				else{
+					# code...
+					Utils::trace($file . " doesn't exist" );
+					continue;
+
+				}
+
+			}
+
+		// }
+
+		
+
+	}
+
+	function beep() {
+		# code...
+		$s = Subscriber::getAllNotDialedIn();
+		if (count($s) == 0) {
+			# code...
+			$this->setView('', 'subscriber');
+			exit;
+		}
+		foreach ($s as $sub) {
+			# code...
+			// echo $value;
+			Utils::buildCallFile($sub->getPhone());
+
+		}
+		// Transfer all files to spool
+		Utils::trace('Transfering 1000 call files to /var/spool/asterisk/outgoing');
+		// shell_exec('mv ' . UPLOAD_PATH . '/*.call /var/spool/asterisk/outgoing');
+
+	}
+
+}
+
+?>
